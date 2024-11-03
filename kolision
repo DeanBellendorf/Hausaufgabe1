@@ -1,0 +1,97 @@
+import pygame
+import random
+
+# Initialisierung
+pygame.init()
+
+# Fenstergröße und Farben
+SCREEN_WIDTH, SCREEN_HEIGHT = 800, 600
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+
+# Hindernisse und Größen für Rechteck, Kreis und unregelmäßige Form
+OBSTACLES = [
+    {"type": "rectangle", "width": 80, "height": 40},
+    {"type": "rectangle", "width": 60, "height": 30},
+    {"type": "circle", "radius": 30},
+    {"type": "circle", "radius": 40},
+    {"type": "polygon", "points": [(0, 0), (50, 20), (20, 60)]},
+    {"type": "polygon", "points": [(0, 0), (40, 10), (10, 50)]},
+]
+
+# Bildschirm erstellen
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+pygame.display.set_caption("Wachsender Sprite mit Hindernissen")
+
+# Sprite initialisieren
+sprite_image = pygame.Surface((20, 20))
+sprite_image.fill((255, 0, 0))
+sprite_rect = sprite_image.get_rect(center=(random.randint(50, SCREEN_WIDTH - 50), random.randint(50, SCREEN_HEIGHT - 50)))
+sprite_growth_rate = 2  # Wachstumsrate des Sprites
+
+# Hindernisse an zufälligen Positionen platzieren
+def create_obstacles():
+    obstacles = []
+    for obstacle_info in OBSTACLES:
+        x = random.randint(50, SCREEN_WIDTH - 50)
+        y = random.randint(50, SCREEN_HEIGHT - 50)
+        if obstacle_info["type"] == "rectangle":
+            rect = pygame.Rect(x, y, obstacle_info["width"], obstacle_info["height"])
+            obstacles.append(("rectangle", rect))
+        elif obstacle_info["type"] == "circle":
+            obstacles.append(("circle", (x, y), obstacle_info["radius"]))
+        elif obstacle_info["type"] == "polygon":
+            points = [(x + px, y + py) for px, py in obstacle_info["points"]]
+            obstacles.append(("polygon", points))
+    return obstacles
+
+obstacles = create_obstacles()
+
+# Hauptspielschleife
+running = True
+while running:
+    screen.fill(WHITE)
+
+    # Ereignisse abfangen
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+    # Sprite wächst
+    sprite_rect.inflate_ip(sprite_growth_rate, sprite_growth_rate)
+    if sprite_rect.width > 100 or sprite_rect.height > 100:  # Grenze für die Größe
+        sprite_rect.size = (20, 20)  # Zurück zur Ausgangsgröße
+        sprite_rect.center = (random.randint(50, SCREEN_WIDTH - 50), random.randint(50, SCREEN_HEIGHT - 50))
+
+    # Kollisionserkennung
+    for obstacle in obstacles:
+        if obstacle[0] == "rectangle" and sprite_rect.colliderect(obstacle[1]):
+            sprite_rect.size = (20, 20)  # Sprite zurücksetzen
+            sprite_rect.center = (random.randint(50, SCREEN_WIDTH - 50), random.randint(50, SCREEN_HEIGHT - 50))
+        elif obstacle[0] == "circle":
+            circle_rect = pygame.Rect(obstacle[1][0] - obstacle[2], obstacle[1][1] - obstacle[2], obstacle[2] * 2, obstacle[2] * 2)
+            if sprite_rect.colliderect(circle_rect):
+                sprite_rect.size = (20, 20)
+                sprite_rect.center = (random.randint(50, SCREEN_WIDTH - 50), random.randint(50, SCREEN_HEIGHT - 50))
+        elif obstacle[0] == "polygon":
+            if sprite_rect.collidepoint(obstacle[1][0]):
+                sprite_rect.size = (20, 20)
+                sprite_rect.center = (random.randint(50, SCREEN_WIDTH - 50), random.randint(50, SCREEN_HEIGHT - 50))
+
+    # Hindernisse zeichnen
+    for obstacle in obstacles:
+        if obstacle[0] == "rectangle":
+            pygame.draw.rect(screen, BLACK, obstacle[1])
+        elif obstacle[0] == "circle":
+            pygame.draw.circle(screen, BLACK, obstacle[1], obstacle[2])
+        elif obstacle[0] == "polygon":
+            pygame.draw.polygon(screen, BLACK, obstacle[1])
+
+    # Sprite zeichnen
+    screen.blit(pygame.transform.scale(sprite_image, (sprite_rect.width, sprite_rect.height)), sprite_rect)
+
+    # Bildschirm aktualisieren
+    pygame.display.flip()
+    pygame.time.delay(30)
+
+pygame.quit()
